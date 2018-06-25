@@ -527,3 +527,79 @@ PATCH는 PUT과 비교해서 부분 데이터를 업데이트하는 차이점이
 \- 네트워크 단으로부터 나머지 내용이 전송되기를 기다리는 동시에 받은 내용 일부를 먼저 화면에 표시하려고 함
 
 \- 각 브라우저가 사용하는 랜더링 엔진별로 조금씩 추가되거나 명칭의 차이가 있긴하지만 기본적으로 위의 과정과 같음
+
+
+
+# Rails form_for 형태에 대해 알아보기
+
+
+
+`form_for` 블록은 HTML 폼을 만드는데 사용됩니다. 이 블럭 안에서 폼에 대한 다양한 컨트롤을 만든는 메소드를 사용할 수 있습니다. 예를들어서 `f.text_field :name`은 레일즈에게 폼 위에 텍스트 인풋(text input) 만들고, `name` 속성(attribute)을 다루게 만듭니다. 오직 이 폼 메소드(`form_for`)와 관련된 모델이 가지고 있는 속성(attribute)값으로만 이러한 메소드를 사용할 수 있습니다. (이 경우에는 `name`과 `title` 그리고 `content` 속성만 사용할 수 있네요.) 코드가 좀 더 간결해지고, 특정한 모델 인스턴스와 폼이 명확하게 연결되기 때문에, 레일즈에서는 `form_for`를 여러분이 작성한 HTML 코드내에 사용하는걸 권장합니다.
+
+또한 `form_for` 블록은 *새글(New Post)* 이나 *글수정(Edit Post)* 액션을 수행할때, 출력될 HTML에 폼의 `action` 태그와 submit 버튼의 이름을 채워넣을 만큼 충분히 영리합니다.
+
+
+
+# form_tag와 form_for의 구분
+
+Rails에서 form을 이해하기 위해 먼저 이해해야하는이 차이입니다. 
+Rails의 `form_for / form_tag`의 분리 방법의 의도로는
+
+> `form_for`: 어떤 model 기반 form을 만들 때 사용 
+> `form_tag`: model에 근거하지 않는 form을 만들 때 사용
+
+것입니다. 
+즉, 어느 `user` 모델에 근거한 `user`를 만들 때 `form_for`를 사용해, 
+그렇지 않고 검색 창 같은 어떤 모델에 근거하지 않는 `form`을 만들고 싶을 때 `form_tag`사용하는 것이 원칙입니다.
+
+## 결론적으로 form_for는 모델 객체 처리에 편리
+
+### post 대상 url은 불필요
+
+```
+form_for ( @user ,  url : users_path )   # 이제 user # create에 post로 
+form_for ( @user ,  url : user_path ( @user ),  html : { method : "patch" })  # 이것이 user update에
+```
+
+하면 url을 명시 할 필요가 없으며, 다음과 같이 객체를 전달하면, url을 추측 해줍니다.
+
+```
+form_for ( @user )  # 이제 @user이 새로운 경우 user # create에 
+                # @ user가 기존의 경우, user # update에 마음대로 나눌 수 있습니다.
+```
+
+아주 편합니다. `@user`가 이미 존재하는지 판단하고있는 것 같습니다. (기본 동작 create / update 이외를 지정하고 싶을 때는 `url: ,method:`모두 지정 해줄 필요가 있습니다.)
+
+### controller도 모델 객체의 초기화를 쉽게 할 수 있습니다.
+
+User.new (user)하는 것만으로 초기화 할 수 있습니다. 
+`form_for` 헬퍼는 마음대로 중첩 된 매개 변수를 만들어 주므로 `controller`에서 처리 하는 것도 도와줍니다.
+
+```
+<% = form_for @user do | f | %>
+  <% = f.text_field : name %>
+  <% = f.text_area : introduction %>
+<% end %>
+```
+
+의` form_for`에서받을 `controller`에서 `params [: user]` 다음에 모든 `user`의 `attributes`가 들어가기 때문에, 나머지는 `params`의 `user`를 `create` 인수로 전달합니다.
+
+```
+def  create ( user ) 
+  User . create ( user )   # (오류 처리는 생략합니다 ..) 
+end
+```
+
+매우 간단합니다.
+
+```
+f.text_field : attr_name
+```
+
+로 전달되는 값은
+
+```
+params [ : user ] [ : attr_name ]   #model 이름 다음에 attr 들어간다.
+```
+
+이렇게 들어주는 때문이지요.
